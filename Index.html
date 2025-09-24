@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Nizwa Quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f9ff;
+        }
+        .container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 2.5rem;
+            background-color: #ffffff;
+            border-radius: 2rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .card {
+            background-color: #e0f2fe;
+            border: 2px solid #90cdf4;
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        input[type="text"], input[type="number"], textarea, select, input[type="date"] {
+            background-color: white;
+            border: 1px solid #cbd5e0;
+            border-radius: 0.75rem;
+            padding: 0.75rem;
+            width: 100%;
+            transition: all 0.2s ease-in-out;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+        }
+        .submit-button {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .submit-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .choice-group label {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 1.5rem;
+            cursor: pointer;
+        }
+        .choice-group input {
+            width: auto;
+            margin-right: 0.5rem;
+        }
+        .correct-answer {
+            color: #1d4ed8; /* Blue color for correct answers */
+            font-weight: 600;
+        }
+        .wrong-answer {
+            color: #dc2626; /* Red color for wrong answers */
+            font-weight: 600;
+        }
+        .unscored-answer {
+            color: #555;
+            font-weight: 400;
+        }
+        .answer-feedback {
+            font-size: 1.5rem;
+            margin-left: 0.5rem;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+<div id="root"></div>
+
+<script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const correctAnswers = {
+        cityType: 'historical and modern city',
+        location: 'the southwest of Oman',
+        capitalCity: 'Muscat city',
+        distance: '164',
+        surroundedBy: 'tall mountains and green valleys',
+        population: 'around 70,000',
+        work: ['agriculture, tourism, and traditional crafts', 'oil and gas, finance, and logistics', 'fishing, trade, and small businesses'],
+        peopleAdjective: 'friendly and welcoming',
+        languages: ['Arabic', 'English', 'Indian languages'],
+        lifestyle: ['relaxed and traditional', 'fast-paced and modern', 'a mixture of modern and traditional'],
+        publicTransport: ['limited', 'safe'],
+        transportModes: 'their own cars and taxis',
+        noTransportDetail: 'a train station',
+        famousFor: ['its ancient fort', 'its traditional souq', 'its lively Friday goat market'],
+        touristActivities: ['visit historical forts', 'explore ancient souqs', 'hike in the mountains', 'shop for souvenirs'],
+        souvenirs: ['Omani frankincense and handmade pottery', 'traditional daggers and silver jewelry', 'spices and dates', 'hand-woven textiles and carpets'],
+        weatherSummer: 'hot and sunny',
+        weatherWinter: 'mild and breezy',
+        touristSeason: 'the weather is pleasant for outdoor activities',
+        facilities: ['a hospital', 'schools', 'a university', 'banks', 'libraries', 'parks', 'fuel stations'],
+        itHas: 'a number of traditional markets and ancient forts',
+        favoriteReason: ['it has restaurants, cinemas, parks, museums, and events that make life enjoyable', 'it provides more jobs, better education, and chances for personal growth', 'it is a city with clean streets, parks, and fresh air, and it gives me comfort, joy, and a good quality of life'],
+        facilityActivities: {
+            hospital: ['get medical treatment'],
+            school: ['to get education'],
+            library: ['to read books'],
+            park: ['to have a walk']
+        }
+    };
+
+    const App = () => {
+        const [answers, setAnswers] = useState({
+            'student-name': '',
+            'date': '',
+            'city-type': '',
+            'location': '',
+            'capital-city': '',
+            'distance': '',
+            'surrounded-by': '',
+            'population': '',
+            'work': '',
+            'people-adjective': '',
+            'language': [],
+            'lifestyle': '',
+            'public-transport': [],
+            'transport-modes': '',
+            'no-transport-detail': '',
+            'famous-for': [],
+            'tourist-activities': [],
+            'souvenirs': '',
+            'weather-summer': '',
+            'weather-winter': '',
+            'tourist-season': '',
+            'facilities': [],
+            'facility-select': '',
+            'activity-select': '',
+            'it-has': '',
+            'favorite-reason': ''
+        });
+
+        const [results, setResults] = useState(null);
+        const [feedback, setFeedback] = useState({});
+        const [message, setMessage] = useState('');
+        const [activityOptions, setActivityOptions] = useState([]);
+
+        useEffect(() => {
+            const selectedFacility = answers['facility-select'];
+            const activities = correctAnswers.facilityActivities[selectedFacility] || [];
+            setActivityOptions(activities);
+            if (!activities.includes(answers['activity-select'])) {
+                setAnswers(prev => ({ ...prev, 'activity-select': '' }));
+            }
+        }, [answers['facility-select']]);
+
+        const handleInputChange = (e) => {
+            const { name, value, type, checked } = e.target;
+            if (type === 'checkbox') {
+                setAnswers(prev => {
+                    const currentValues = prev[name];
+                    if (checked) {
+                        return { ...prev, [name]: [...currentValues, value] };
+                    } else {
+                        return { ...prev, [name]: currentValues.filter(v => v !== value) };
+                    }
+                });
+            } else {
+                setAnswers(prev => ({ ...prev, [name]: value }));
+            }
+        };
+
+        const handleSubmit = (e) => {
+            e.preventDefault();
+            let score = 0;
+            let totalPoints = 0;
+            let paragraphHTML = '';
+            const newFeedback = {};
+
+            const scoreSingle = (key, value, name) => {
+                const correctAnswer = correctAnswers[key];
+                const isCorrect = Array.isArray(correctAnswer) ? correctAnswer.includes(value) : correctAnswer === value;
+                newFeedback[name] = isCorrect;
+                if (value) {
+                    if (isCorrect) score += 1;
+                    totalPoints += 1;
+                    const spanClass = isCorrect ? 'correct-answer' : 'wrong-answer';
+                    return `<span class="${spanClass}">${value}</span>`;
+                }
+                return `<span class="unscored-answer">[Not Answered]</span>`;
+            };
+
+            const scoreCheckboxes = (name, selected, correct) => {
+                let paragraphText = [];
+                let isCorrectOverall = true;
+                if (selected.length === 0) {
+                    newFeedback[name] = false;
+                    return `<span class="unscored-answer">[Not Answered]</span>`;
+                }
+                selected.forEach(option => {
+                    const isCorrect = correct.includes(option);
+                    newFeedback[`${name}-${option}`] = isCorrect;
+                    if (isCorrect) score += 1;
+                    totalPoints += 1;
+                    if (!isCorrect) isCorrectOverall = false;
+                    const spanClass = isCorrect ? 'correct-answer' : 'wrong-answer';
+                    paragraphText.push(`<span class="${spanClass}">${option}</span>`);
+                });
+                newFeedback[name] = isCorrectOverall;
+                return paragraphText.join(', ');
+            };
+
+            // Scoring and Paragraph Generation
+            const cityType = scoreSingle('cityType', answers['city-type'], 'city-type');
+            const location = scoreSingle('location', answers.location, 'location');
+            const surroundedBy = scoreSingle('surroundedBy', answers['surrounded-by'], 'surrounded-by');
+            const capitalCity = scoreSingle('capitalCity', answers['capital-city'], 'capital-city');
+            const distance = scoreSingle('distance', answers.distance, 'distance');
+            const population = scoreSingle('population', answers.population, 'population');
+            const work = scoreSingle('work', answers.work, 'work');
+            const peopleAdjective = scoreSingle('peopleAdjective', answers['people-adjective'], 'people-adjective');
+            const languages = scoreCheckboxes('language', answers.language, correctAnswers.languages);
+            const lifestyle = scoreSingle('lifestyle', answers.lifestyle, 'lifestyle');
+            const publicTransport = scoreCheckboxes('publicTransport', answers['public-transport'], correctAnswers.publicTransport);
+            const transportModes = scoreSingle('transportModes', answers['transport-modes'], 'transport-modes');
+            const noTransportDetail = scoreSingle('noTransportDetail', answers['no-transport-detail'], 'no-transport-detail');
+            const famousFor = scoreCheckboxes('famousFor', answers['famous-for'], correctAnswers.famousFor);
+            const touristActivities = scoreCheckboxes('touristActivities', answers['tourist-activities'], correctAnswers.touristActivities);
+            const souvenirs = scoreSingle('souvenirs', answers.souvenirs, 'souvenirs');
+            const weatherSummer = scoreSingle('weatherSummer', answers['weather-summer'], 'weather-summer');
+            const weatherWinter = scoreSingle('weatherWinter', answers['weather-winter'], 'weather-winter');
+            const touristSeason = scoreSingle('touristSeason', answers['tourist-season'], 'tourist-season');
+            const facilities = scoreCheckboxes('facilities', answers.facilities, correctAnswers.facilities);
+            const itHas = scoreSingle('itHas', answers['it-has'], 'it-has');
+            const favoriteReason = scoreSingle('favoriteReason', answers['favorite-reason'], 'favorite-reason');
+
+            const isFacilityCorrect = answers['facility-select'] ? true : false;
+            newFeedback['facility-select'] = isFacilityCorrect;
+            if(isFacilityCorrect) totalPoints += 1;
+            const facilityClass = isFacilityCorrect ? 'correct-answer' : 'wrong-answer';
+            const facilityText = answers['facility-select'] ? `<span class="${facilityClass}">${answers['facility-select']}</span>` : `<span class="unscored-answer">[Not Answered]</span>`;
+            
+            const isActivityCorrect = answers['activity-select'] && correctAnswers.facilityActivities[answers['facility-select']]?.includes(answers['activity-select']);
+            newFeedback['activity-select'] = isActivityCorrect;
+            if(answers['activity-select']) {
+                if(isActivityCorrect) score += 1;
+                totalPoints += 1;
+            }
+            const activityClass = isActivityCorrect ? 'correct-answer' : 'wrong-answer';
+            const activityText = answers['activity-select'] ? `<span class="${activityClass}">${answers['activity-select']}</span>` : `<span class="unscored-answer">[Not Answered]</span>`;
+            
+            // Building the paragraph
+            paragraphHTML += `<p><strong>Nizwa</strong> is a ${cityType}. It is located in ${location}.`;
+            paragraphHTML += ` It is about ${distance} km away from the capital city, ${capitalCity}.`;
+            paragraphHTML += ` It is surrounded by ${surroundedBy}.</p>`;
+            
+            paragraphHTML += `<p>`;
+            paragraphHTML += `The population is ${population}. `;
+            paragraphHTML += `Many people work in ${work}. `;
+            paragraphHTML += `People there are ${peopleAdjective}. They speak ${languages}.`;
+            paragraphHTML += ` The lifestyle is ${lifestyle}.</p>`;
+
+            paragraphHTML += `<p>The public transportation is ${publicTransport}. `;
+            paragraphHTML += `People use ${transportModes}. `;
+            paragraphHTML += `There isn't ${noTransportDetail}.</p>`;
+
+            paragraphHTML += `<p>It is famous for ${famousFor}. `;
+            paragraphHTML += `Tourists can do things like ${touristActivities}. `;
+            paragraphHTML += `Tourists can also buy souvenirs like ${souvenirs}. `;
+            paragraphHTML += `In summer, the weather is usually ${weatherSummer} and in winter it is ${weatherWinter}. `;
+            paragraphHTML += `Tourists usually visit in winter because ${touristSeason}.</p>`;
+            
+            paragraphHTML += `<p>There are facilities such as ${facilities}. `;
+            paragraphHTML += `People can go to the ${facilityText} to ${activityText}.`;
+            paragraphHTML += ` It also has ${itHas}.</p>`;
+
+            paragraphHTML += `<p>I love Nizwa because ${favoriteReason}.</p>`;
+
+            setResults({ score, totalPoints, paragraphHTML });
+            setFeedback(newFeedback);
+            
+            let finalMessage = '';
+            if (score >= 25) {
+                finalMessage = "Great job!";
+            } else if (score >= 15) {
+                finalMessage = "Keep it up!";
+            }
+            setMessage(finalMessage);
+        };
+
+        const handlePrint = () => {
+            if (!results) return;
+            const newWindow = window.open('', '_blank', 'width=800,height=600');
+            if (newWindow) {
+                newWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>My Place Description</title>
+                        <style>
+                            body { font-family: 'Inter', sans-serif; line-height: 1.6; padding: 20px; }
+                            h1 { color: #1e40af; text-align: center; }
+                            p { margin-bottom: 1.5rem; }
+                            .correct-answer { color: #1d4ed8; font-weight: 600; }
+                            .wrong-answer { color: #dc2626; font-weight: 600; }
+                            .unscored-answer { color: #555; font-weight: 400; }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>My Description of a Place in Oman</h1>
+                        <p><strong>Student Name:</strong> ${answers['student-name']}</p>
+                        <p><strong>Date:</strong> ${answers['date']}</p>
+                        <div>${results.paragraphHTML}</div>
+                        <button onclick="window.print()" style="padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">Print</button>
+                    </body>
+                    </html>
+                `);
+                newWindow.document.close();
+            }
+        };
+
+        const getFeedbackIcon = (questionName, optionValue) => {
+            if (!results) return null;
+            if (questionName.startsWith('facility-select') || questionName.startsWith('activity-select') || questionName.startsWith('it-has') || questionName.startsWith('favorite-reason')) {
+                 const isCorrect = feedback[questionName];
+                 const icon = isCorrect ? '✓' : '✗';
+                 const color = isCorrect ? 'text-green-500' : 'text-red-500';
+                 return <span className={`answer-feedback ${color}`}>{icon}</span>;
+            } else if (questionName.startsWith('public-transport') || questionName.startsWith('language') || questionName.startsWith('famousFor') || questionName.startsWith('tourist-activities')) {
+                const isCorrect = feedback[`${questionName}-${optionValue}`];
+                const icon = isCorrect ? '✓' : '✗';
+                const color = isCorrect ? 'text-green-500' : 'text-red-500';
+                return <span className={`answer-feedback ${color}`}>{icon}</span>;
+            }
+            const isCorrect = feedback[questionName];
+            const icon = isCorrect ? '✓' : '✗';
+            const color = isCorrect ? 'text-green-500' : 'text-red-500';
+            return <span className={`answer-feedback ${color}`}>{icon}</span>;
+        };
+
+        return (
+            <div className="container text-gray-800">
+                <div className="bg-red-500 text-white font-bold p-4 rounded-lg mb-8 text-center shadow-lg">
+                    ⚠️ IMPORTANT: Do not copy the answers from this test to your real test. This will be considered plagiarism and you will be awarded a zero.
+                </div>
+
+                <h1 className="text-4xl font-bold text-center text-blue-700 mb-2">My Favorite City: Nizwa</h1>
+                <p className="text-center text-gray-600 mb-8">Let's describe the beautiful city of Nizwa. Fill in the blanks below to build a perfect paragraph and check your score!</p>
+
+                {results && (
+                    <div id="output-section" className="card mt-8">
+                        <h2 className="text-2xl font-bold text-blue-600 mb-4">📝 Your Results</h2>
+                        <div id="score-text" className="text-3xl font-bold mb-4 text-center">Your Score: {results.score} out of {results.totalPoints}</div>
+                        {message && <div className="text-xl font-bold text-center mb-4 text-blue-800">{message}</div>}
+                        <div id="output-text" className="prose text-gray-700" dangerouslySetInnerHTML={{ __html: results.paragraphHTML }}></div>
+                        <div className="flex justify-center mt-6">
+                            <button onClick={handlePrint} className="submit-button bg-purple-500 text-white font-bold py-2 px-6 rounded-full text-md shadow-md hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-400">
+                                Print / Share
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                <form id="worksheet-form" onSubmit={handleSubmit}>
+                    <div className="card mb-8">
+                        <h2 className="text-2xl font-semibold text-blue-600 mb-4">✍️ Student Information</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label htmlFor="student-name" className="block text-sm font-medium mb-1">Student Name:</label>
+                                <input type="text" id="student-name" name="student-name" className="w-full" placeholder="Enter your full name" value={answers['student-name']} onChange={handleInputChange} />
+                            </div>
+                            <div>
+                                <label htmlFor="date" className="block text-sm font-medium mb-1">Date:</label>
+                                <input type="date" id="date" name="date" className="w-full" value={answers['date']} onChange={handleInputChange} />
+                            </div>
+                        </div>
+                    </div>
+                    {/* Section 1: Location & Description */}
+                    <div className="card">
+                        <h2 className="text-2xl font-semibold text-blue-600 mb-4">📍 Location & Description</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label htmlFor="city-name" className="block text-sm font-medium mb-1">City Name:</label>
+                                <input type="text" id="city-name" className="w-full" value="Nizwa" readOnly />
+                            </div>
+                            <div>
+                                <label htmlFor="city-type" className="block text-sm font-medium mb-1 flex items-center">
+                                    It is a:
+                                    {results && getFeedbackIcon('city-type')}
+                                </label>
+                                <select id="city-type" name="city-type" className="w-full" value={answers['city-type']} onChange={handleInputChange}>
+                                    <option value="" disabled>Choose an option...</option>
+                                    <option value="historical and modern city">historical and modern city</option>
+                                    <option value="capital city">capital city</option>
+                                    <option value="small city">small city</option>
+                                    <option value="largest city">largest city</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="mb-4">
+                            <label htmlFor="location" className="block text-sm font-medium mb-1 flex items-center">
+                                It is located in:
+                                {results && getFeedbackIcon('location')}
+                            </label>
+                            <select id="location" name="location" className="w-full" value={answers.location} onChange={handleInputChange}>
+                                <option value="" disabled>Choose an option...</option>
+                                <option value="the southwest of Oman">the southwest of Oman</option>
+                                <option value="the northeast of oman">the northeast of oman</option>
+                                <option value="the west of Oman">the west of Oman</option>
+                                <option value="the east of Oman">the east of Oman</option>
+                            </select>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label htmlFor="distance" className="block text-sm font-medium mb-1 flex items-center">
+                                    Distance from capital (km):
+                                    {results && getFeedbackIcon('distance')}
+                                </label>
+                                <select id="distance" name="distance" className="w-full" value={answers.distance} onChange={handleInputChange}>
+                                    <option value="" disabled>Choose an option...</option>
+                                    <option value="164">164</option>
+                                    <option value="100">100</option>
+                                    <option value="50">50</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label htmlFor="capital-city" className="block text-sm font-medium mb-1 flex items-center">
+                                    Capital city:
+                                    {results && getFeedbackIcon('capitalCity')}
+                                </label>
+                                <select id="capital-city" name="capital-city" className="w-full" value={answers['capital-city']} onChange={handleInputChange}>
+                                    <option value="" disabled>Choose an option...</option>
+                                    <option value="Muscat city">Muscat city</option>
+                                    <option value="Sohar city">Sohar city</option>
+                                    <option value="Sur city">Sur city</option>
+                                    <option value="Salalah city">Salalah city</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="mt-4">
+                            <label htmlFor="surrounded-by" className="block text-sm font-medium mb-1 flex items-center">
+                                It is surrounded by:
+                                {results && getFeedbackIcon('surroundedBy')}
+                            </label>
+                            <select id="surrounded-by" name="surrounded-by" className="w-full" value={answers['surrounded-by']} onChange={handleInputChange}>
+                                <option value="" disabled>Choose an option...</option>
+                                <option value="tall mountains and green valleys">tall mountains and green valleys</option>
+                                <option value="beautiful beaches and ocean">beautiful beaches and ocean</option>
+                                <option value="sandy deserts">sandy deserts</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Section 2: People & Lifestyle */}
+                    <div className="card">
+                        <h2 className="text-2xl font-semibold text-blue-600 mb-4">👥 People & Lifestyle</h2>
+                        <div className="mb-4">
+                            <label htmlFor="population" className="block text-sm font-medium mb-1 flex items-center">
+                                The population is:
+                                {results && getFeedbackIcon('population')}
+                            </label>
+                            <select id="population" name="population" className="w-full" value={answers.population} onChange={handleInputChange}>
+                                <option value="" disabled>Choose an option...</option>
+                                <option value="around 70,000">around 70,000</option>
+                                <option value="1 million">1 million</option>
+                                <option value="1.5 million">1.5 million</option>
+                            </select>
+                        </div>
+                        <div className="mb-4">
+                            <label htmlFor="work" className="block text-sm font-medium mb-1 flex items-center">
+                                Many people work in:
+                                {results && getFeedbackIcon('work')}
+                            </label>
+                            <select id="work" name="work" className="w-full" value={answers.work} onChange={handleInputChange}>
+                                <option value="" disabled>Choose an option...</option>
+                                <option value="agriculture, tourism, and traditional crafts">agriculture, tourism, and traditional crafts</option>
+                                <option value="oil and gas, finance, and logistics">oil and gas, finance, and logistics</option>
+                                <option value="fishing, trade, and small businesses">fishing, trade, and small businesses</option>
+                            </select>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label htmlFor="people-adjective" className="block text-sm font-medium mb-1 flex items-center">
+                                    People in this city are:
+                                    {results && getFeedbackIcon('peopleAdjective')}
+                                </label>
+                                <select id="people-adjective" name="people-adjective" className="w-full" value={answers['people-adjective']} onChange={handleInputChange}>
+                                    <option value="" disabled>Choose an option...</option>
+                                    <option value="friendly and welcoming">friendly and welcoming</option>
+                                    <option value="reserved and traditional">reserved and traditional</option>
+                                    <option value="lively and modern">lively and modern</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">They speak:</label>
+                                <div className="choice-group flex flex-wrap gap-2 text-sm">
+                                    <label className="flex items-center space-x-1">
+                                        <input type="checkbox" name="language" value="Arabic" checked={answers.language.includes('Arabic')} onChange={handleInputChange} />
+                                        <span>Arabic</span>
+                                        {results && getFeedbackIcon('language', 'Arabic')}
+                                    </label>
+                                    <label className="flex items-center space-x-1">
+                                        <input type="checkbox" name="language" value="English" checked={answers.language.includes('English')} onChange={handleInputChange} />
+                                        <span>English</span>
+                                        {results && getFeedbackIcon('language', 'English')}
+                                    </label>
+                                    <label className="flex items-center space-x-1">
+                                        <input type="checkbox" name="language" value="Indian languages" checked={answers.language.includes('Indian languages')} onChange={handleInputChange} />
+                                        <span>Indian languages</span>
+                                        {results && getFeedbackIcon('language', 'Indian languages')}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="mt-4">
+                            <label htmlFor="lifestyle" className="block text-sm font-medium mb-1 flex items-center">
+                                The lifestyle is:
+                                {results && getFeedbackIcon('lifestyle')}
+                            </label>
+                            <select id="lifestyle" name="lifestyle" className="w-full" value={answers.lifestyle} onChange={handleInputChange}>
+                                <option value="" disabled>Choose an option...</option>
+                                <option value="relaxed and traditional">relaxed and traditional</option>
+                                <option value="fast-paced and modern">fast-paced and modern</option>
+                                <option value="a mixture of modern and traditional">a mixture of modern and traditional</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Transportation Section */}
+                    <div className="card">
+                        <h2 className="text-2xl font-semibold text-blue-600 mb-4">🚗 Transportation</h2>
+                        <div className="mb-4">
+                            <label htmlFor="public-transport" className="block text-sm font-medium mb-1">Public transportation is: (Choose any 3)</label>
+                            <div className="flex flex-wrap gap-2 text-sm">
+                                <label className="flex items-center space-x-1">
+                                    <input type="checkbox" name="public-transport" value="expensive" checked={answers['public-transport'].includes('expensive')} onChange={handleInputChange} />
+                                    <span>Expensive</span>
+                                    {results && getFeedbackIcon('public-transport', 'expensive')}
+                                </label>
+                                <label className="flex items-center space-x-1">
+                                    <input type="checkbox" name="public-transport" value="limited" checked={answers['public-transport'].includes('limited')} onChange={handleInputChange} />
+                                    <span>Limited</span>
+                                    {results && getFeedbackIcon('public-transport', 'limited')}
+                                </label>
+                                <label className="flex items-center space-x-1">
+                                    <input type="checkbox" name="public-transport" value="cheap" checked={answers['public-transport'].includes('cheap')} onChange={handleInputChange} />
+                                    <span>Cheap</span>
+                                    {results && getFeedbackIcon('public-transport', 'cheap')}
+                                </label>
+                                <label className="flex items-center space-x-1">
+                                    <input type="checkbox" name="public-transport" value="safe" checked={answers['public-transport'].includes('safe')} onChange={handleInputChange} />
+                                    <span>Safe</span>
+                                    {results && getFeedbackIcon('public-transport', 'safe')}
+                                </label>
+                                <label className="flex items-center space-x-1">
+                                    <input type="checkbox" name="public-transport" value="comfortable" checked={answers['public-transport'].includes('comfortable')} onChange={handleInputChange} />
+                                    <span>Comfortable</span>
+                                    {results && getFeedbackIcon('public-transport', 'comfortable')}
+                                </label>
+                            </div>
+                        </div>
+                        <div className="mb-4">
+                            <label htmlFor="transport-modes" className="block text-sm font-medium mb-1 flex items-center">
+                                People use:
+                                {results && getFeedbackIcon('transportModes')}
+                            </label>
+                            <select id="transport-modes" name="transport-modes" className="w-full" value={answers['transport-modes']} onChange={handleInputChange}>
+                                <option value="" disabled>Choose an option...</option>
+                                <option value="their own cars and taxis">their own cars and taxis</option>
+                                <option value="public buses and trains">public buses and trains</option>
+                            </select>
+                        </div>
+                        <div className="mb-4">
+                            <label htmlFor="no-transport-detail" className="block text-sm font-medium mb-1 flex items-center">
+                                There isn't:
+                                {results && getFeedbackIcon('noTransportDetail')}
+                            </label>
+                            <select id="no-transport-detail" name="no-transport-detail" className="w-full" value={answers['no-transport-detail']} onChange={handleInputChange}>
+                                <option value="" disabled>Choose an option...</option>
+                                <option value="a train station">a train station</option>
+                                <option value="an underground metro">an underground metro</option>
+                                <option value="a large airport">a large airport</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Section 3: Tourist Attractions & Culture */}
+                    <div className="card">
+                        <h2 className="text-2xl font-semibold text-blue-600 mb-4">🏖️ Tourist Attractions</h2>
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">It is famous for: (Choose 2)</label>
+                            <div className="flex flex-wrap gap-2 text-sm">
+                                <label className="flex items-center space-x-1">
+                                    <input type="checkbox" name="famous-for" value="its ancient fort" checked={answers['famous-for'].includes('its ancient fort')} onChange={handleInputChange} />
+                                    <span>Its ancient fort</span>
+                                    {results && getFeedbackIcon('famousFor', 'its ancient fort')}
+                                </label>
+                                <label className="flex items-center space-x-1">
+                                    <input type="checkbox" name="famous-for" value="its traditional souq" checked={answers['famous-for'].includes('its traditional souq')} onChange={handleInputChange} />
+                                    <span>Its traditional souq</span>
+                                    {results && getFeedbackIcon('famousFor', 'its traditional souq')}
+                                </label>
+                                <label className="flex items-center space-x-1">
+                                    <input type="checkbox" name="famous-for" value="its lively Friday goat market" checked={answers['famous-for'].includes('its lively Friday goat market')} onChange={handleInputChange} />
+                                    <span>Its lively Friday goat market</span>
+                                    {results && getFeedbackIcon('famousFor', 'its lively Friday goat market')}
+                                </label>
+                            </div>
+                        </div>
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">Tourists can do things like: (Choose 3)</label>
+                            <div className="flex flex-wrap gap-2 text-sm">
+                                <label className="flex items-center space-x-1">
+                                    <input type="checkbox" name="tourist-activities" value="visit historical forts" checked={answers['tourist-activities'].includes('visit historical forts')} onChange={handleInputChange} />
+                                    <span>Visit historical forts</span>
+                                    {results && getFeedbackIcon('touristActivities', 'visit historical forts')}
+                                </label>
+                                <label className="flex items-center space-x-1">
+                                    <input type="checkbox" name="tourist-activities" value="explore ancient souqs" checked={answers['tourist-activities'].includes('explore ancient souqs')} onChange={handleInputChange} />
+                                    <span>Explore ancient souqs</span>
+                                    {results && getFeedbackIcon('touristActivities', 'explore ancient souqs')}
+                                </label>
+                                <label className="flex items-center space-x-1">
+                                    <input type="checkbox" name="tourist-activities" value="hike in the mountains" checked={answers['tourist-activities'].includes('hike in the mountains')} onChange={handleInputChange} />
+                                    <span>Hike in the mountains</span>
+                                    {results && getFeedbackIcon('touristActivities', 'hike in the mountains')}
+                                </label>
+                                <label className="flex items-center space-x-1">
+                                    <input type="checkbox" name="tourist-activities" value="shop for souvenirs" checked={answers['tourist-activities'].includes('shop for souvenirs')} onChange={handleInputChange} />
+                                    <span>Shop for souvenirs</span>
+                                    {results && getFeedbackIcon('touristActivities', 'shop for souvenirs')}
+                                </label>
+                            </div>
+                        </div>
+                        <div className="mb-4">
+                            <label htmlFor="souvenirs" className="block text-sm font-medium mb-1 flex items-center">
+                                Tourists can buy souvenirs like:
+                                {results && getFeedbackIcon('souvenirs')}
+                            </label>
+                            <select id="souvenirs" name="souvenirs" className="w-full" value={answers.souvenirs} onChange={handleInputChange}>
+                                <option value="" disabled>Choose an option...</option>
+                                <option value="Omani frankincense and handmade pottery">Omani frankincense and handmade pottery</option>
+                                <option value="traditional daggers and silver jewelry">traditional daggers (khanjars) and silver jewelry</option>
+                                <option value="spices and dates">spices and dates</option>
+                                <option value="hand-woven textiles and carpets">hand-woven textiles and carpets</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Section 4: Weather & Environment */}
+                    <div className="card">
+                        <h2 className="text-2xl font-semibold text-blue-600 mb-4">☀️ Weather & Environment</h2>
+                        <div className="mb-4">
+                            <label htmlFor="weather-summer" className="block text-sm font-medium mb-1 flex items-center">
+                                In summer, the weather is usually:
+                                {results && getFeedbackIcon('weatherSummer')}
+                            </label>
+                            <select id="weather-summer" name="weather-summer" className="w-full" value={answers['weather-summer']} onChange={handleInputChange}>
+                                <option value="" disabled>Choose an option...</option>
+                                <option value="hot and sunny">hot and sunny</option>
+                                <option value="mild and breezy">mild and breezy</option>
+                                <option value="cold and snowy">cold and snowy</option>
+                            </select>
+                        </div>
+                        <div className="mb-4">
+                            <label htmlFor="weather-winter" className="block text-sm font-medium mb-1 flex items-center">
+                                And in winter, it is:
+                                {results && getFeedbackIcon('weatherWinter')}
+                            </label>
+                            <select id="weather-winter" name="weather-winter" className="w-full" value={answers['weather-winter']} onChange={handleInputChange}>
+                                <option value="" disabled>Choose an option...</option>
+                                <option value="hot and sunny">hot and sunny</option>
+                                <option value="mild and breezy">mild and breezy</option>
+                                <option value="cold and windy">cold and windy</option>
+                            </select>
+                        </div>
+                        <div className="mb-4">
+                            <label htmlFor="tourist-season" className="block text-sm font-medium mb-1 flex items-center">
+                                Tourists usually visit in winter because:
+                                {results && getFeedbackIcon('touristSeason')}
+                            </label>
+                            <select id="tourist-season" name="tourist-season" className="w-full" value={answers['tourist-season']} onChange={handleInputChange}>
+                                <option value="" disabled>Choose an option...</option>
+                                <option value="the weather is pleasant for outdoor activities">the weather is pleasant for outdoor activities</option>
+                                <option value="there are many festivals and events">there are many festivals and events</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    {/* New Buildings & Facilities Section */}
+                    <div className="card">
+                        <h2 className="text-2xl font-semibold text-blue-600 mb-4">🏛️ Buildings & Facilities</h2>
+                        <div className="mb-4">
+                            <label htmlFor="buildings-and-facilities" className="block text-sm font-medium mb-1">There are facilities such as: (Choose any 4)</label>
+                            <div className="flex flex-wrap gap-2 text-sm">
+                                <label className="flex items-center space-x-1">
+                                    <input type="checkbox" name="facilities" value="a hospital" checked={answers.facilities.includes('a hospital')} onChange={handleInputChange} />
+                                    <span>Hospital</span>
+                                    {results && getFeedbackIcon('facilities', 'a hospital')}
+                                </label>
+                                <label className="flex items-center space-x-1">
+                                    <input type="checkbox" name="facilities" value="schools" checked={answers.facilities.includes('schools')} onChange={handleInputChange} />
+                                    <span>Schools</span>
+                                    {results && getFeedbackIcon('facilities', 'schools')}
+                                </label>
+                                <label className="flex items-center space-x-1">
+                                    <input type="checkbox" name="facilities" value="a university" checked={answers.facilities.includes('a university')} onChange={handleInputChange} />
+                                    <span>University</span>
+                                    {results && getFeedbackIcon('facilities', 'a university')}
+                                </label>
+                                <label className="flex items-center space-x-1">
+                                    <input type="checkbox" name="facilities" value="banks" checked={answers.facilities.includes('banks')} onChange={handleInputChange} />
+                                    <span>Banks</span>
+                                    {results && getFeedbackIcon('facilities', 'banks')}
+                                </label>
+                                <label className="flex items-center space-x-1">
+                                    <input type="checkbox" name="facilities" value="libraries" checked={answers.facilities.includes('libraries')} onChange={handleInputChange} />
+                                    <span>Libraries</span>
+                                    {results && getFeedbackIcon('facilities', 'libraries')}
+                                </label>
+                                <label className="flex items-center space-x-1">
+                                    <input type="checkbox" name="facilities" value="parks" checked={answers.facilities.includes('parks')} onChange={handleInputChange} />
+                                    <span>Parks</span>
+                                    {results && getFeedbackIcon('facilities', 'parks')}
+                                </label>
+                                <label className="flex items-center space-x-1">
+                                    <input type="checkbox" name="facilities" value="fuel stations" checked={answers.facilities.includes('fuel stations')} onChange={handleInputChange} />
+                                    <span>Fuel Stations</span>
+                                    {results && getFeedbackIcon('facilities', 'fuel stations')}
+                                </label>
+                            </div>
+                        </div>
+                        <div className="mb-4">
+                            <label htmlFor="facility-select" className="block text-sm font-medium mb-1 flex items-center">
+                                People can go to the:
+                                {results && getFeedbackIcon('facility-select')}
+                            </label>
+                            <select id="facility-select" name="facility-select" className="w-full mb-2" value={answers['facility-select']} onChange={handleInputChange}>
+                                <option value="" disabled>Choose a facility...</option>
+                                <option value="hospital">Hospital</option>
+                                <option value="school">School</option>
+                                <option value="library">Library</option>
+                                <option value="park">Park</option>
+                            </select>
+                            <label htmlFor="activity-select" className="block text-sm font-medium mb-1 flex items-center">
+                                to:
+                                {results && getFeedbackIcon('activity-select')}
+                            </label>
+                            <select id="activity-select" name="activity-select" className="w-full" value={answers['activity-select']} onChange={handleInputChange}>
+                                <option value="" disabled>Choose an activity...</option>
+                                {activityOptions.map(activity => (
+                                    <option key={activity} value={activity}>{activity}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="mb-4">
+                            <label htmlFor="it-has" className="block text-sm font-medium mb-1 flex items-center">
+                                It also has:
+                                {results && getFeedbackIcon('it-has')}
+                            </label>
+                            <select id="it-has" name="it-has" className="w-full" value={answers['it-has']} onChange={handleInputChange}>
+                                <option value="" disabled>Choose an option...</option>
+                                <option value="a huge port and beautiful corniche">a huge port and beautiful corniche</option>
+                                <option value="a number of traditional markets and ancient forts">a number of traditional markets and ancient forts</option>
+                                <option value="many historical mosques">many historical mosques</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Concluding Section */}
+                    <div className="card">
+                        <h2 className="text-2xl font-semibold text-blue-600 mb-4">❤️ Why is it your favorite city?</h2>
+                        <div className="mb-4">
+                            <label htmlFor="favorite-reason" className="block text-sm font-medium mb-1 flex items-center">
+                                I love Nizwa because:
+                                {results && getFeedbackIcon('favorite-reason')}
+                            </label>
+                            <select id="favorite-reason" name="favorite-reason" className="w-full" value={answers['favorite-reason']} onChange={handleInputChange}>
+                                <option value="" disabled>Choose an option...</option>
+                                <option value="it has restaurants, cinemas, parks, museums, and events that make life enjoyable">it has restaurants, cinemas, parks, museums, and events that make life enjoyable</option>
+                                <option value="it provides more jobs, better education, and chances for personal growth">it provides more jobs, better education, and chances for personal growth</option>
+                                <option value="it is a city with clean streets, parks, and fresh air, and it gives me comfort, joy, and a good quality of life">it is a city with clean streets, parks, and fresh air, and it gives me comfort, joy, and a good quality of life</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Submit Button */}
+                    <div className="flex justify-center mt-8">
+                        <button type="submit" className="submit-button bg-green-500 text-white font-bold py-3 px-8 rounded-full text-lg shadow-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2">
+                            Submit Quiz
+                        </button>
+                    </div>
+                </form>
+            </div>
+        );
+    };
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+</script>
+
+</body>
+</html>
